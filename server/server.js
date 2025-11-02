@@ -17,41 +17,29 @@ connectDB();
 const app = express();
 
 // Security middleware
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.tailwindcss.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://cdn.jsdelivr.net"],
-      connectSrc: ["'self'"]
-    }
-  }
-}));
-
+app.use(helmet());
 app.use(cors());
 
-// Rate limiting - more generous for free tier
+// Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
+  windowMs: 15 * 60 * 1000,
+  max: 50, // Reduced for storage conservation
+  message: 'Too many requests'
 });
 app.use('/api/', limiter);
 
-// Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+// Body parsing with size limits
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // Serve static files
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Health check endpoint
+// Health check
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'OK', 
-    timestamp: new Date().toISOString(),
-    service: 'ZenPinger Monitoring'
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -59,12 +47,12 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/monitors', monitorRoutes);
 
-// Serve frontend for all other routes
+// Serve frontend
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
-// Error handling middleware
+// Error handling
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Something went wrong!' });
@@ -73,39 +61,24 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`ZenPinger server running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV}`);
+  console.log(`Server running on port ${PORT}`);
 });
 
-// Start monitoring service with error handling
-const startMonitoring = () => {
-  try {
-    // Check monitors every 5 minutes for free tier
-    setInterval(() => {
-      pingService.checkAllMonitors();
-    }, 5 * 60 * 1000);
+// Optimized monitoring intervals
+const MONITOR_INTERVAL = 5 * 60 * 1000; // 5 minutes
+const CLEANUP_INTERVAL = 7 * 24 * 60 * 60 * 1000; // Weekly
 
-    // Initial check after 10 seconds
-    setTimeout(() => {
-      pingService.checkAllMonitors();
-    }, 10000);
+// Start monitoring
+setInterval(() => {
+  pingService.checkAllMonitors();
+}, MONITOR_INTERVAL);
 
-    console.log('Monitoring service started');
-  } catch (error) {
-    console.error('Failed to start monitoring service:', error);
-  }
-};
+// Weekly cleanup
+setInterval(() => {
+  pingService.cleanupOldData();
+}, CLEANUP_INTERVAL);
 
-// Start monitoring after server is running
-setTimeout(startMonitoring, 5000);
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully');
-  process.exit(0);
-});
-
-process.on('SIGINT', () => {
-  console.log('SIGINT received, shutting down gracefully');
-  process.exit(0);
-});
+// Initial check
+setTimeout(() => {
+  pingService.checkAllMonitors();
+}, 10000);
