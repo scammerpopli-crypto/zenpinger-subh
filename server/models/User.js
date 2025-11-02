@@ -5,14 +5,16 @@ const userSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
+    maxlength: 30
   },
   email: {
     type: String,
     required: true,
     unique: true,
     lowercase: true,
-    trim: true
+    trim: true,
+    maxlength: 50
   },
   password: {
     type: String,
@@ -21,22 +23,28 @@ const userSchema = new mongoose.Schema({
   },
   plan: {
     type: String,
-    enum: ['free', 'pro', 'enterprise'],
+    enum: ['free', 'pro'],
     default: 'free'
   },
   maxMonitors: {
     type: Number,
-    default: 10
+    default: 5 // Reduced for free tier
+  },
+  settings: {
+    // Store settings in minimal format
+    notifications: { type: Boolean, default: true }
   },
   createdAt: {
     type: Date,
     default: Date.now
   }
+}, {
+  timestamps: true
 });
 
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
-  this.password = await bcrypt.hash(this.password, 12);
+  this.password = await bcrypt.hash(this.password, 10); // Reduced salt rounds
   next();
 });
 
