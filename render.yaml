@@ -13,11 +13,5 @@ services:
         value: mongodb+srv://subhxcosmo-web-db:badf1a8a050a@subhxosint.lrjlzbm.mongodb.net/zenpinger?retryWrites=true&w=majority&appName=SUBHXOSINT
       - key: JWT_SECRET
         generateValue: true
-    healthCheckPath: /api/auth/me
+    healthCheckPath: /health
     autoDeploy: true
-
-databases:
-  - name: zenpinger-storage
-    plan: free
-    type: mongodb
-    ipAllowList: []
