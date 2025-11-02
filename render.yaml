@@ -3,14 +3,21 @@ services:
     name: zenpinger
     env: node
     plan: free
+    rootDir: zenpinger
     buildCommand: npm install
     startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
       - key: MONGODB_URI
-        fromDatabase:
-          name: zenpinger-db
-          property: connectionString
+        value: mongodb+srv://subhxcosmo-web-db:badf1a8a050a@subhxosint.lrjlzbm.mongodb.net/zenpinger?retryWrites=true&w=majority&appName=SUBHXOSINT
       - key: JWT_SECRET
         generateValue: true
+    healthCheckPath: /api/auth/me
+    autoDeploy: true
+
+databases:
+  - name: zenpinger-storage
+    plan: free
+    type: mongodb
+    ipAllowList: []
